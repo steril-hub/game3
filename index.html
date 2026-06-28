@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Камінь, Ножиці, Папір (Telegram Edition)</title>
+    <!-- Підключаємо Telegram Web Apps SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            /* Використовуємо змінні кольорів Telegram, щоб дизайн підлаштовувався під тему користувача */
+            --primary: var(--tg-theme-button-color, #4a00e0);
+            --secondary: #8e2de2;
+            --bg-color: var(--tg-theme-bg-color, #2c3e50);
+            --text-color: var(--tg-theme-text-color, #ffffff);
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            padding: 15px;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px 20px;
+            width: 100%;
+            max-width: 450px; /* Трохи звузили для мобільних екранів Telegram */
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 1rem;
+        }
+
+        .score-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--warning);
+        }
+
+        .display-area {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 30px;
+            min-height: 100px;
+        }
+
+        .choice-display {
+            font-size: 3.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .vs {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .result-message {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 25px;
+            height: 35px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn {
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 2.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent; /* Прибирає синій спалах при тапкові на смартфонах */
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .reset-btn {
+            margin-top: 25px;
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .reset-btn:hover {
+            background: white;
+            color: #4a00e0;
+        }
+
+        .win { color: var(--success); }
+        .lose { color: var(--danger); }
+        .draw { color: var(--warning); }
+
+        .shake {
+            animation: shakeAnimation 0.5s ease;
+        }
+
+        @keyframes shakeAnimation {
+            0%, 100% { transform: translateY(0); }
+            25% { transform: translateY(-12px); }
+            75% { transform: translateY(12px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1 id="welcome-title">Камінь Ножиці Папір</h1>
+
+        <div class="scoreboard">
+            <div class="score-box">
+                <span id="player-name">Гравець</span>
+                <span id="player-score" class="score">0</span>
+            </div>
+            <div class="score-box">
+                <span>Нічиї</span>
+                <span id="draw-score" class="score">0</span>
+            </div>
+            <div class="score-box">
+                <span>Бот</span>
+                <span id="bot-score" class="score">0</span>
+            </div>
+        </div>
+
+        <div class="display-area">
+            <div>
+                <div style="font-size: 0.8rem; margin-bottom: 5px; color: #ddd;">Ти</div>
+                <div id="player-choice-display" class="choice-display">👤</div>
+            </div>
+            <div class="vs">VS</div>
+            <div>
+                <div style="font-size: 0.8rem; margin-bottom: 5px; color: #ddd;">Бот</div>
+                <div id="bot-choice-display" class="choice-display">🤖</div>
+            </div>
+        </div>
+
+        <div id="result-text" class="result-message">Обери свій хід!</div>
+
+        <div class="controls">
+            <button class="btn" onclick="play('rock')">✊</button>
+            <button class="btn" onclick="play('scissors')">✌️</button>
+            <button class="btn" onclick="play('paper')">✋</button>
+        </div>
+
+        <button class="reset-btn" onclick="resetGame()">Скинути рахунок</button>
+    </div>
+
+    <script>
+        // Ініціалізація Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready(); // Повідомляємо ТГ, що додаток завантажився
+        tg.expand(); // Розгортаємо вікно на максимум
+
+        // Якщо доступне ім'я користувача в ТГ — підставляємо його
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const username = tg.initDataUnsafe.user.first_name;
+            document.getElementById('player-name').innerText = username;
+        }
+
+        let scores = { player: 0, bot: 0, draws: 0 };
+        const emojis = { rock: '✊', scissors: '✌️', paper: '✋', userDefault: '👤', botDefault: '🤖' };
+
+        const playerDisplay = document.getElementById('player-choice-display');
+        const botDisplay = document.getElementById('bot-choice-display');
+        const resultText = document.getElementById('result-text');
+        const playerScoreEl = document.getElementById('player-score');
+        const botScoreEl = document.getElementById('bot-score');
+        const drawScoreEl = document.getElementById('draw-score');
+
+        function play(playerChoice) {
+            const choices = ['rock', 'scissors', 'paper'];
+            const botChoice = choices[Math.floor(Math.random() * choices.length)];
+
+            // Тактильний відгук (вібрація) при виборі, якщо підтримується пристроєм
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+
+            playerDisplay.classList.add('shake');
+            botDisplay.classList.add('shake');
+            resultText.innerText = "Зачекай...";
+
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(btn => btn.style.pointerEvents = 'none');
+
+            setTimeout(() => {
+                playerDisplay.classList.remove('shake');
+                botDisplay.classList.remove('shake');
+                buttons.forEach(btn => btn.style.pointerEvents = 'auto');
+
+                playerDisplay.innerText = emojis[playerChoice];
+                botDisplay.innerText = emojis[botChoice];
+
+                if (playerChoice === botChoice) {
+                    scores.draws++;
+                    resultText.innerText = "Нічия! 🤝";
+                    resultText.className = "result-message draw";
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+                } else if (
+                    (playerChoice === 'rock' && botChoice === 'scissors') ||
+                    (playerChoice === 'scissors' && botChoice === 'paper') ||
+                    (playerChoice === 'paper' && botChoice === 'rock')
+                ) {
+                    scores.player++;
+                    resultText.innerText = "Ти переміг! 🎉";
+                    resultText.className = "result-message win";
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                } else {
+                    scores.bot++;
+                    resultText.innerText = "Бот переміг! 🤖❌";
+                    resultText.className = "result-message lose";
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                }
+
+                playerScoreEl.innerText = scores.player;
+                botScoreEl.innerText = scores.bot;
+                drawScoreEl.innerText = scores.draws;
+
+            }, 500);
+        }
+
+        function resetGame() {
+            scores = { player: 0, bot: 0, draws: 0 };
+            playerScoreEl.innerText = '0';
+            botScoreEl.innerText = '0';
+            drawScoreEl.innerText = '0';
+            playerDisplay.innerText = emojis.userDefault;
+            botDisplay.innerText = emojis.botDefault;
+            resultText.innerText = "Обери свій хід!";
+            resultText.className = "result-message";
+        }
+    </script>
+</body>
+</html>
